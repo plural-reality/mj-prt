@@ -57,7 +57,7 @@ export const ListingForm = ({ items, onSave, onCancel }) => {
         {available.length === 0 ? (
           <p style={{ color: theme.textMuted, fontSize: 15, textAlign: "center", padding: 40 }}>在庫がありません</p>
         ) : (
-          <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
             {available.map((item, idx) => (
               <div key={item.id} onClick={() => toggle(item.id)} style={{
                 display: "flex", alignItems: "center", gap: 12,

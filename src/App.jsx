@@ -125,7 +125,7 @@ export const App = () => {
                 <div style={{ fontSize: 15 }}>買い付けた個体がありません</div>
               </div>
             ) : (
-              <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
                 {buyingItems.map((item, idx) => (
                   <div key={item.id} style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
@@ -157,7 +157,7 @@ export const App = () => {
                 <div style={{ fontSize: 15 }}>撮影待ちの個体はありません</div>
               </div>
             ) : (
-              <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
                 {pickingItems.map((item, idx) => (
                   <div key={item.id} style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
@@ -192,7 +192,7 @@ export const App = () => {
                 { label: "売却済", value: `${items.filter(i => i.status === STATUS.SOLD).length}点` },
               ].map((m, i) => (
                 <div key={i} style={{
-                  background: theme.surface, borderRadius: 12,
+                  background: theme.surface, borderRadius: 16,
                   padding: "14px 16px",
                 }}>
                   <div style={{ fontSize: 13, color: theme.textMuted, marginBottom: 4 }}>{m.label}</div>
@@ -207,7 +207,7 @@ export const App = () => {
               </div>
             ) : (
               <>
-                <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+                <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
                   <div style={{ padding: "12px 16px 8px", fontSize: 13, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>カテゴリ別</div>
                   {CATEGORIES.map(cat => {
                     const catItems = stockItems.filter(i => i.category === cat);
@@ -225,7 +225,7 @@ export const App = () => {
                   })}
                 </div>
 
-                <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
                   {stockItems.map((item, idx) => (
                     <div key={item.id} style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -274,7 +274,7 @@ export const App = () => {
                   const costTotal = listingItems.reduce((s, i) => s + (i.cost || 0), 0);
                   const isSold = listing.status === "売却済";
                   return (
-                    <div key={listing.id} style={{ background: theme.surface, borderRadius: 12, padding: 16 }}>
+                    <div key={listing.id} style={{ background: theme.surface, borderRadius: 16, padding: 16 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                         <div>
                           <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{listing.title}</div>

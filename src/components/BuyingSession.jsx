@@ -52,7 +52,7 @@ export const BuyingSession = ({ onAddItems, onCancel }) => {
         品名だけ先に入れて、金額は後から。まとめ金額を入れると均等按分します。
       </p>
 
-      <div style={{ background: theme.surface, borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+      <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
         {rows.map((row, i) => (
           <div key={i} style={{
             display: "flex", gap: 8, alignItems: "center", padding: "10px 16px",

@@ -10,7 +10,7 @@ const tabs = [
 export const BottomNav = ({ tab, setTab, counts }) => (
   <nav style={{
     position: "fixed", bottom: 0, left: 0, right: 0,
-    background: "rgba(30,30,30,0.88)",
+    background: "rgba(20,20,20,0.7)",
     WebkitBackdropFilter: "saturate(180%) blur(20px)",
     backdropFilter: "saturate(180%) blur(20px)",
     borderTop: `0.5px solid ${theme.separator}`,
