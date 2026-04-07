@@ -97,7 +97,7 @@ export const App = () => {
       {/* Header */}
       <div style={{ padding: "20px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.8 }}>myodai</div>
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.8 }}>CLASS DESIGN INF</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>{formatYen(totalStockValue)}</div>
