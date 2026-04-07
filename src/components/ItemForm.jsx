@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { theme, baseBtn } from "../theme";
+import { theme, baseBtn, inputStyle, labelStyle } from "../theme";
 import { STATUS, CATEGORIES, genId, genManagementNo } from "../utils";
 import { Field } from "./Field";
 
@@ -25,20 +25,23 @@ export const ItemForm = ({ onSave, onCancel, buyingId }) => {
     });
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <button onClick={onCancel} style={{ ...baseBtn, background: "none", color: theme.textMuted, padding: "8px 0" }}>キャンセル</button>
-        <span style={{ fontWeight: 700, fontSize: 17, color: theme.text }}>個体を登録</span>
-        <button onClick={handleSave} style={{ ...baseBtn, background: theme.accent, color: "#fff", padding: "8px 18px" }}>保存</button>
+    <div style={{ padding: "0 20px 20px" }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "14px 0", marginBottom: 8,
+      }}>
+        <button onClick={onCancel} style={{ ...baseBtn, background: "none", color: theme.accent, padding: 0, fontSize: 17, fontWeight: 400 }}>キャンセル</button>
+        <span style={{ fontWeight: 600, fontSize: 17, color: theme.text, letterSpacing: -0.4 }}>個体を登録</span>
+        <button onClick={handleSave} style={{ ...baseBtn, background: "none", color: theme.accent, padding: 0, fontSize: 17, fontWeight: 600 }}>保存</button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Field label="品名 *" value={name} onChange={setName} placeholder="ハーマンミラー イームズチェア" autoFocus />
-        <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <Field label="品名" value={name} onChange={setName} placeholder="ハーマンミラー イームズチェア" autoFocus />
+        <div style={{ display: "flex", gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 12, color: theme.textMuted, marginBottom: 4, fontWeight: 600 }}>カテゴリ</label>
+            <label style={labelStyle}>カテゴリ</label>
             <select value={category} onChange={e => setCategory(e.target.value)}
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.surface2, color: theme.text, fontSize: 16, fontFamily: "inherit", outline: "none", boxSizing: "border-box", WebkitAppearance: "none" }}>
+              style={{ ...inputStyle }}>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -50,7 +53,7 @@ export const ItemForm = ({ onSave, onCancel, buyingId }) => {
         <Field label="メモ" value={note} onChange={setNote} placeholder="状態・備考など" multiline />
       </div>
 
-      <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 16, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 13, color: theme.textMuted, marginTop: 20, lineHeight: 1.5 }}>
         管理番号は自動採番されます。金額は後から入力可能です。
       </p>
     </div>

@@ -10,25 +10,31 @@ const tabs = [
 export const BottomNav = ({ tab, setTab, counts }) => (
   <nav style={{
     position: "fixed", bottom: 0, left: 0, right: 0,
-    background: theme.bg, borderTop: `1px solid ${theme.border}`,
+    background: "rgba(30,30,30,0.88)",
+    WebkitBackdropFilter: "saturate(180%) blur(20px)",
+    backdropFilter: "saturate(180%) blur(20px)",
+    borderTop: `0.5px solid ${theme.separator}`,
     display: "flex", justifyContent: "space-around",
-    padding: "8px 0 max(8px, env(safe-area-inset-bottom))",
+    padding: "6px 0 max(6px, env(safe-area-inset-bottom))",
     zIndex: 100,
   }}>
     {tabs.map(t => (
       <button key={t.id} onClick={() => setTab(t.id)} style={{
-        ...baseBtn, background: "none",
+        ...baseBtn, background: "none", position: "relative",
         color: tab === t.id ? theme.accent : theme.textMuted,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-        padding: "4px 20px", fontSize: 11,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+        padding: "4px 20px", fontSize: 10, fontWeight: 500,
+        letterSpacing: 0.02,
       }}>
-        <span style={{ fontSize: 20, lineHeight: 1 }}>{t.icon}</span>
+        <span style={{ fontSize: 22, lineHeight: 1 }}>{t.icon}</span>
         <span>{t.label}</span>
         {counts[t.id] > 0 && (
           <span style={{
             position: "absolute", top: 0, right: 8,
-            background: theme.accent, color: "#fff",
-            borderRadius: 10, fontSize: 10, padding: "1px 5px", fontWeight: 700,
+            background: theme.danger, color: "#fff",
+            borderRadius: 9, fontSize: 11, minWidth: 18, height: 18,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 5px", fontWeight: 600,
           }}>{counts[t.id]}</span>
         )}
       </button>
