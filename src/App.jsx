@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { theme, baseBtn } from "./theme";
 import { STATUS, CATEGORIES, formatYen } from "./utils";
 import { loadItems, loadListings, saveItems, saveListings } from "./storage";
-import { Card } from "./components/Card";
 import { BottomNav } from "./components/BottomNav";
 import { ItemForm } from "./components/ItemForm";
 import { ListingForm } from "./components/ListingForm";
 import { BuyingSession } from "./components/BuyingSession";
+import { PhotoStrip } from "./components/PhotoStrip";
 
 const Shell = ({ children, style }) => (
   <div style={{
@@ -15,6 +15,10 @@ const Shell = ({ children, style }) => (
     WebkitFontSmoothing: "antialiased",
     ...style,
   }}>{children}</div>
+);
+
+const Thumb = ({ src }) => (
+  <img src={src} style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
 );
 
 export const App = () => {
@@ -56,6 +60,10 @@ export const App = () => {
 
   const advanceToStock = useCallback((itemId) => {
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, status: STATUS.STOCK } : i));
+  }, []);
+
+  const updatePhotos = useCallback((itemId, photos) => {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, photos } : i));
   }, []);
 
   const markSold = useCallback((listingId) => {
@@ -157,23 +165,25 @@ export const App = () => {
                 <div style={{ fontSize: 15 }}>撮影待ちの個体はありません</div>
               </div>
             ) : (
-              <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
-                {pickingItems.map((item, idx) => (
-                  <div key={item.id} style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                    borderTop: idx > 0 ? `0.5px solid ${theme.separator}` : "none",
-                  }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{item.name}</div>
-                      <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2 }}>
-                        {item.managementNo} · {item.category}
-                        {item.brand && ` · ${item.brand}`}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {pickingItems.map(item => (
+                  <div key={item.id} style={{ background: theme.surface, borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{item.name}</div>
+                        <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2 }}>
+                          {item.managementNo} · {item.category}
+                        </div>
                       </div>
+                      <button onClick={() => advanceToStock(item.id)} style={{
+                        ...baseBtn, padding: "7px 14px", flexShrink: 0,
+                        background: theme.successSoft, color: theme.success, fontSize: 14, fontWeight: 500,
+                      }}>→ 在庫</button>
                     </div>
-                    <button onClick={() => advanceToStock(item.id)} style={{
-                      ...baseBtn, padding: "7px 14px", flexShrink: 0,
-                      background: theme.successSoft, color: theme.success, fontSize: 14, fontWeight: 500,
-                    }}>→ 在庫</button>
+                    <PhotoStrip
+                      photos={item.photos ?? []}
+                      onChange={(photos) => updatePhotos(item.id, photos)}
+                    />
                   </div>
                 ))}
               </div>
@@ -228,10 +238,11 @@ export const App = () => {
                 <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
                   {stockItems.map((item, idx) => (
                     <div key={item.id} style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      display: "flex", alignItems: "center", gap: 12,
                       padding: "14px 16px",
                       borderTop: idx > 0 ? `0.5px solid ${theme.separator}` : "none",
                     }}>
+                      {item.photos?.[0] && <Thumb src={item.photos[0]} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{item.name}</div>
                         <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2 }}>
@@ -271,6 +282,7 @@ export const App = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {listings.map(listing => {
                   const listingItems = items.filter(i => listing.itemIds.includes(i.id));
+                  const allPhotos = listingItems.flatMap(i => i.photos ?? []);
                   const costTotal = listingItems.reduce((s, i) => s + (i.cost || 0), 0);
                   const isSold = listing.status === "売却済";
                   return (
@@ -286,14 +298,16 @@ export const App = () => {
                           color: isSold ? theme.textMuted : theme.warning,
                         }}>{listing.status}</span>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
-                        {listingItems.map(it => (
-                          <span key={it.id} style={{
-                            fontSize: 12, padding: "2px 8px", borderRadius: 5,
-                            background: theme.surface2, color: theme.textMuted,
-                          }}>{it.managementNo}</span>
-                        ))}
-                      </div>
+                      {allPhotos.length > 0 && (
+                        <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 10 }}>
+                          {allPhotos.map((src, i) => (
+                            <img key={i} src={src} style={{
+                              width: 56, height: 56, objectFit: "cover",
+                              borderRadius: 8, flexShrink: 0,
+                            }} />
+                          ))}
+                        </div>
+                      )}
                       {listing.startPrice > 0 && (
                         <div style={{ fontSize: 13, color: theme.textMuted }}>開始価格: {formatYen(listing.startPrice)}</div>
                       )}

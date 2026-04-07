@@ -73,6 +73,9 @@ export const ListingForm = ({ items, onSave, onCancel }) => {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0,
                 }}>{selected.has(item.id) ? "✓" : ""}</span>
+                {item.photos?.[0] && (
+                  <img src={item.photos[0]} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 500, color: theme.text }}>{item.name}</div>
                   <div style={{ fontSize: 13, color: theme.textMuted }}>{item.managementNo} · {item.category}</div>
