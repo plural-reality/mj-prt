@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEYS = { items: "myodai-items", listings: "myodai-listings" };
 
-const STATUS = { STOCK: "在庫", LISTED: "出品中", SOLD: "売却済" };
+const STATUS = { PICKING: "撮影待ち", STOCK: "在庫", LISTED: "出品中", SOLD: "売却済" };
 const CATEGORIES = ["チェア", "ソファ", "テーブル", "デスク", "照明", "収納", "その他"];
 
 function genId() {
@@ -58,6 +58,7 @@ const baseBtn = {
 
 function StatusBadge({ status }) {
   const colors = {
+    [STATUS.PICKING]: { bg: "rgba(160,140,200,0.12)", color: "#A08CC8" },
     [STATUS.STOCK]: { bg: theme.successSoft, color: theme.success },
     [STATUS.LISTED]: { bg: theme.warningSoft, color: theme.warning },
     [STATUS.SOLD]: { bg: theme.accentSoft, color: theme.accent },
@@ -85,9 +86,10 @@ function Card({ children, style, onClick }) {
 
 function BottomNav({ tab, setTab, counts }) {
   const tabs = [
-    { id: "items", label: "個体", icon: "◇" },
-    { id: "listings", label: "出品", icon: "▤" },
-    { id: "dash", label: "在庫", icon: "◎" },
+    { id: "buying", label: "仕入", icon: "＋" },
+    { id: "pick", label: "検品", icon: "◇" },
+    { id: "stock", label: "在庫", icon: "◎" },
+    { id: "listing", label: "出品", icon: "▤" },
   ];
   return (
     <nav style={{
@@ -135,7 +137,7 @@ function ItemForm({ onSave, onCancel, buyingId }) {
       category, brand: brand.trim(),
       cost: Number(cost) || 0,
       note: note.trim(),
-      status: STATUS.STOCK,
+      status: STATUS.PICKING,
       buyingId: buyingId || null,
       createdAt: new Date().toISOString(),
     });
@@ -306,7 +308,7 @@ function BuyingSession({ onAddItems, onCancel }) {
       brand: "",
       cost: perItemCost,
       note: note.trim() ? `[まとめ買い] ${note.trim()}` : "[まとめ買い]",
-      status: STATUS.STOCK,
+      status: STATUS.PICKING,
       buyingId,
       createdAt: new Date().toISOString(),
     }));
@@ -372,7 +374,7 @@ function BuyingSession({ onAddItems, onCancel }) {
 export default function App() {
   const [items, setItems] = useState([]);
   const [listings, setListings] = useState([]);
-  const [tab, setTab] = useState("items");
+  const [tab, setTab] = useState("buying");
   const [view, setView] = useState("list"); // list | addItem | addBuying | addListing
   const [loaded, setLoaded] = useState(false);
 
@@ -402,7 +404,11 @@ export default function App() {
     setListings(prev => [listing, ...prev]);
     setItems(prev => prev.map(i => listing.itemIds.includes(i.id) ? { ...i, status: STATUS.LISTED } : i));
     setView("list");
-    setTab("listings");
+    setTab("listing");
+  }, []);
+
+  const advanceToStock = useCallback((itemId) => {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, status: STATUS.STOCK } : i));
   }, []);
 
   const markSold = useCallback((listingId) => {
@@ -422,12 +428,15 @@ export default function App() {
 
   if (!loaded) return <div style={{ background: theme.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: theme.textMuted }}>読み込み中...</div>;
 
+  const pickingItems = items.filter(i => i.status === STATUS.PICKING);
   const stockItems = items.filter(i => i.status === STATUS.STOCK);
-  const totalStockValue = stockItems.reduce((s, i) => s + (i.cost || 0), 0);
+  const listedItems = items.filter(i => i.status === STATUS.LISTED);
+  const totalStockValue = [...stockItems, ...listedItems].reduce((s, i) => s + (i.cost || 0), 0);
   const counts = {
-    items: stockItems.length,
-    listings: listings.filter(l => l.status !== "売却済").length,
-    dash: 0,
+    buying: 0,
+    pick: pickingItems.length,
+    stock: stockItems.length,
+    listing: listings.filter(l => l.status !== "売却済").length,
   };
 
   // ─── Render views ───
@@ -457,14 +466,31 @@ export default function App() {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: theme.accent }}>{formatYen(totalStockValue)}</div>
-          <div style={{ fontSize: 11, color: theme.textMuted }}>{stockItems.length}点 在庫</div>
+          <div style={{ fontSize: 11, color: theme.textMuted }}>{stockItems.length + listedItems.length}点 在庫</div>
         </div>
+      </div>
+
+      {/* Pipeline indicator */}
+      <div style={{ padding: "0 16px 8px", display: "flex", alignItems: "center", gap: 0 }}>
+        {["buying", "pick", "stock", "listing"].map((id, i) => (
+          <div key={id} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+            <div style={{
+              flex: 1, height: 3, borderRadius: 2,
+              background: tab === id ? theme.accent
+                : ["buying", "pick", "stock", "listing"].indexOf(tab) > i ? theme.success
+                : theme.border,
+              transition: "background 0.2s",
+            }} />
+            {i < 3 && <span style={{ fontSize: 10, color: theme.textMuted, margin: "0 2px" }}>›</span>}
+          </div>
+        ))}
       </div>
 
       {/* Tab Content */}
       <div style={{ padding: "0 16px" }}>
 
-        {tab === "items" && (
+        {/* ── 仕入タブ: 買い付け・登録 ── */}
+        {tab === "buying" && (
           <>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <button onClick={() => setView("addItem")} style={{
@@ -478,22 +504,19 @@ export default function App() {
               }}>＋ まとめ買い</button>
             </div>
 
-            {items.length === 0 ? (
+            {pickingItems.length === 0 ? (
               <div style={{ textAlign: "center", padding: 40, color: theme.textMuted }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>◇</div>
-                <div style={{ fontSize: 14 }}>個体がまだ登録されていません</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>上のボタンから登録してください</div>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>＋</div>
+                <div style={{ fontSize: 14 }}>仕入れた個体がありません</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>上のボタンから登録 → 検品へ進みます</div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {items.map(item => (
+                {pickingItems.map(item => (
                   <Card key={item.id}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 15, fontWeight: 600 }}>{item.name}</span>
-                          <StatusBadge status={item.status} />
-                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
                         <div style={{ fontSize: 12, color: theme.textMuted }}>
                           {item.managementNo} · {item.category}
                           {item.brand && ` · ${item.brand}`}
@@ -511,7 +534,112 @@ export default function App() {
           </>
         )}
 
-        {tab === "listings" && (
+        {/* ── 検品タブ: 撮影・検品 → 在庫へ ── */}
+        {tab === "pick" && (
+          <>
+            {pickingItems.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40, color: theme.textMuted }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>◇</div>
+                <div style={{ fontSize: 14 }}>検品待ちの個体はありません</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>仕入タブから登録すると、ここに表示されます</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {pickingItems.map(item => (
+                  <Card key={item.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                        <div style={{ fontSize: 12, color: theme.textMuted }}>
+                          {item.managementNo} · {item.category}
+                          {item.brand && ` · ${item.brand}`}
+                        </div>
+                        {item.note && <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 4 }}>{item.note}</div>}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: theme.textMuted, flexShrink: 0, marginLeft: 12 }}>
+                        {formatYen(item.cost)}
+                      </span>
+                    </div>
+                    <button onClick={() => advanceToStock(item.id)} style={{
+                      ...baseBtn, marginTop: 10, padding: "8px 16px", width: "100%",
+                      background: theme.successSoft, color: theme.success, fontSize: 13,
+                    }}>検品完了 → 在庫へ</button>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── 在庫タブ: 在庫状況 + サマリー ── */}
+        {tab === "stock" && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              {[
+                { label: "在庫金額", value: formatYen(totalStockValue), color: theme.accent },
+                { label: "在庫点数", value: `${stockItems.length}点`, color: theme.text },
+                { label: "出品中", value: `${listedItems.length}点`, color: theme.warning },
+                { label: "売却済", value: `${items.filter(i => i.status === STATUS.SOLD).length}点`, color: theme.success },
+              ].map((m, i) => (
+                <Card key={i} style={{ textAlign: "center", padding: 16 }}>
+                  <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>{m.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: m.color }}>{m.value}</div>
+                </Card>
+              ))}
+            </div>
+
+            {stockItems.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 30, color: theme.textMuted }}>
+                <div style={{ fontSize: 14 }}>在庫がありません</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>検品が完了した個体がここに表示されます</div>
+              </div>
+            ) : (
+              <>
+                <Card style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: theme.text }}>カテゴリ別</div>
+                  {CATEGORIES.map(cat => {
+                    const catItems = stockItems.filter(i => i.category === cat);
+                    if (catItems.length === 0) return null;
+                    const catValue = catItems.reduce((s, i) => s + (i.cost||0), 0);
+                    return (
+                      <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${theme.border}` }}>
+                        <span style={{ fontSize: 14, color: theme.text }}>{cat}</span>
+                        <span style={{ fontSize: 13, color: theme.textMuted }}>{catItems.length}点 · {formatYen(catValue)}</span>
+                      </div>
+                    );
+                  })}
+                </Card>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {stockItems.map(item => (
+                    <Card key={item.id}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                          <div style={{ fontSize: 12, color: theme.textMuted }}>
+                            {item.managementNo} · {item.category}
+                            {item.brand && ` · ${item.brand}`}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: theme.text, flexShrink: 0, marginLeft: 12 }}>
+                          {formatYen(item.cost)}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <button onClick={resetAll} style={{
+              ...baseBtn, width: "100%", padding: 12, marginTop: 20,
+              background: "transparent", color: theme.danger, border: `1px solid ${theme.danger}33`,
+            }}>全データをリセット</button>
+          </>
+        )}
+
+        {/* ── 出品タブ: 出品作成・管理 ── */}
+        {tab === "listing" && (
           <>
             <button onClick={() => setView("addListing")} style={{
               ...baseBtn, width: "100%", padding: 14, marginBottom: 16,
@@ -565,44 +693,6 @@ export default function App() {
                 })}
               </div>
             )}
-          </>
-        )}
-
-        {tab === "dash" && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-              {[
-                { label: "在庫金額", value: formatYen(totalStockValue), color: theme.accent },
-                { label: "在庫点数", value: `${stockItems.length}点`, color: theme.text },
-                { label: "出品中", value: `${listings.filter(l=>l.status==="出品準備").length}件`, color: theme.warning },
-                { label: "売却済", value: `${listings.filter(l=>l.status==="売却済").length}件`, color: theme.success },
-              ].map((m, i) => (
-                <Card key={i} style={{ textAlign: "center", padding: 20 }}>
-                  <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 6 }}>{m.label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: m.color }}>{m.value}</div>
-                </Card>
-              ))}
-            </div>
-
-            <Card style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: theme.text }}>カテゴリ別 在庫</div>
-              {CATEGORIES.map(cat => {
-                const catItems = stockItems.filter(i => i.category === cat);
-                if (catItems.length === 0) return null;
-                const catValue = catItems.reduce((s, i) => s + (i.cost||0), 0);
-                return (
-                  <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${theme.border}` }}>
-                    <span style={{ fontSize: 14, color: theme.text }}>{cat}</span>
-                    <span style={{ fontSize: 13, color: theme.textMuted }}>{catItems.length}点 · {formatYen(catValue)}</span>
-                  </div>
-                );
-              })}
-            </Card>
-
-            <button onClick={resetAll} style={{
-              ...baseBtn, width: "100%", padding: 12, marginTop: 20,
-              background: "transparent", color: theme.danger, border: `1px solid ${theme.danger}33`,
-            }}>全データをリセット</button>
           </>
         )}
       </div>
