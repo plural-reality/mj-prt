@@ -1,4 +1,4 @@
-const KEYS = { items: "myodai-items", listings: "myodai-listings" };
+const KEYS = { items: "myodai-items", listings: "myodai-listings", buyings: "myodai-buyings" };
 
 const load = (key) => {
   try {
@@ -13,5 +13,7 @@ const save = (key, data) => {
 
 export const loadItems = () => load(KEYS.items) ?? [];
 export const loadListings = () => load(KEYS.listings) ?? [];
+export const loadBuyings = () => load(KEYS.buyings) ?? [];
 export const saveItems = (items) => save(KEYS.items, items);
 export const saveListings = (listings) => save(KEYS.listings, listings);
+export const saveBuyings = (buyings) => save(KEYS.buyings, buyings);

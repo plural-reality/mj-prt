@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { theme, baseBtn } from "./theme";
 import { STATUS, CATEGORIES, formatYen } from "./utils";
-import { loadItems, loadListings, saveItems, saveListings } from "./storage";
+import { loadItems, loadListings, loadBuyings, saveItems, saveListings, saveBuyings } from "./storage";
 import { BottomNav } from "./components/BottomNav";
 import { ItemForm } from "./components/ItemForm";
 import { ListingForm } from "./components/ListingForm";
-import { BuyingSession } from "./components/BuyingSession";
+import { BuyingForm } from "./components/BuyingForm";
 import { PhotoStrip } from "./components/PhotoStrip";
 
 const Shell = ({ children, style }) => (
@@ -24,27 +24,50 @@ const Thumb = ({ src }) => (
 export const App = () => {
   const [items, setItems] = useState([]);
   const [listings, setListings] = useState([]);
+  const [buyings, setBuyings] = useState([]);
   const [tab, setTab] = useState("buying");
   const [view, setView] = useState("list");
+  const [editingItem, setEditingItem] = useState(null);
+  const [addItemBuyingId, setAddItemBuyingId] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setItems(loadItems());
     setListings(loadListings());
+    setBuyings(loadBuyings());
     setLoaded(true);
   }, []);
 
   useEffect(() => { loaded && saveItems(items); }, [items, loaded]);
   useEffect(() => { loaded && saveListings(listings); }, [listings, loaded]);
+  useEffect(() => { loaded && saveBuyings(buyings); }, [buyings, loaded]);
 
-  const addItem = useCallback((item) => {
-    setItems(prev => [item, ...prev]);
+  const addBuying = useCallback((buying, firstItem) => {
+    setBuyings(prev => [buying, ...prev]);
+    firstItem && setItems(prev => [firstItem, ...prev]);
     setView("list");
   }, []);
 
-  const addBulkItems = useCallback((newItems) => {
-    setItems(prev => [...newItems, ...prev]);
+  const addItem = useCallback((item) => {
+    setItems(prev => [item, ...prev]);
+    setAddItemBuyingId(null);
     setView("list");
+  }, []);
+
+  const updateItem = useCallback((updated) => {
+    setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
+    setEditingItem(null);
+    setView("list");
+  }, []);
+
+  const startEditItem = useCallback((item) => {
+    setEditingItem(item);
+    setView("editItem");
+  }, []);
+
+  const startAddItemToBuying = useCallback((buyingId) => {
+    setAddItemBuyingId(buyingId);
+    setView("addItem");
   }, []);
 
   const addListing = useCallback((listing) => {
@@ -73,10 +96,10 @@ export const App = () => {
   }, [listings]);
 
   const resetAll = useCallback(() =>
-    confirm("全データを削除しますか？") && (setItems([]), setListings([]))
+    confirm("全データを削除しますか？") && (setItems([]), setListings([]), setBuyings([]))
   , []);
 
-  const goList = () => setView("list");
+  const goList = () => (setView("list"), setEditingItem(null), setAddItemBuyingId(null));
 
   const buyingItems = items.filter(i => i.status === STATUS.BUYING);
   const pickingItems = items.filter(i => i.status === STATUS.PICKING);
@@ -90,14 +113,18 @@ export const App = () => {
     listing: listings.filter(l => l.status !== "売却済").length,
   };
 
+  const itemsForBuying = (buyingId) => items.filter(i => i.buyingId === buyingId);
+
   return !loaded ? (
     <Shell style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
       <span style={{ color: theme.textMuted }}>読み込み中...</span>
     </Shell>
   ) : view === "addItem" ? (
-    <Shell><ItemForm onSave={addItem} onCancel={goList} /></Shell>
+    <Shell><ItemForm onSave={addItem} onCancel={goList} buyingId={addItemBuyingId} /></Shell>
+  ) : view === "editItem" && editingItem ? (
+    <Shell><ItemForm onSave={updateItem} onCancel={goList} item={editingItem} buyingId={editingItem.buyingId} /></Shell>
   ) : view === "addBuying" ? (
-    <Shell><BuyingSession onAddItems={addBulkItems} onCancel={goList} /></Shell>
+    <Shell><BuyingForm onSave={addBuying} onCancel={goList} /></Shell>
   ) : view === "addListing" ? (
     <Shell><ListingForm items={items} onSave={addListing} onCancel={goList} /></Shell>
   ) : (
@@ -119,39 +146,78 @@ export const App = () => {
         {/* Buying タブ */}
         {tab === "buying" && (
           <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button onClick={() => setView("addItem")} style={{
-                ...baseBtn, flex: 1, padding: 14, background: theme.accent, color: "#fff",
-              }}>＋ 1点登録</button>
-              <button onClick={() => setView("addBuying")} style={{
-                ...baseBtn, flex: 1, padding: 14, background: theme.surface, color: theme.text,
-              }}>＋ まとめ買い</button>
-            </div>
+            <button onClick={() => setView("addBuying")} style={{
+              ...baseBtn, width: "100%", padding: 14, marginBottom: 16,
+              background: theme.accent, color: "#fff",
+            }}>＋ 仕入れ</button>
 
-            {buyingItems.length === 0 ? (
+            {buyings.length === 0 ? (
               <div style={{ textAlign: "center", padding: 48, color: theme.textMuted }}>
-                <div style={{ fontSize: 15 }}>買い付けた個体がありません</div>
+                <div style={{ fontSize: 15 }}>仕入れがまだありません</div>
               </div>
             ) : (
-              <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
-                {buyingItems.map((item, idx) => (
-                  <div key={item.id} style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                    borderTop: idx > 0 ? `0.5px solid ${theme.separator}` : "none",
-                  }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{item.name}</div>
-                      <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2 }}>
-                        {item.managementNo} · {item.category}
-                        {item.brand && ` · ${item.brand}`}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {buyings.map(buying => {
+                  const linkedItems = itemsForBuying(buying.id);
+                  return (
+                    <div key={buying.id} style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
+                      {/* Buying header */}
+                      <div style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.2 }}>{buying.supplier}</div>
+                          <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2 }}>
+                            {formatYen(buying.totalCost)} · {linkedItems.length}点
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 12, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
+                          background: theme.accentSoft, color: theme.accent,
+                        }}>
+                          {new Date(buying.createdAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+
+                      {/* Linked items */}
+                      {linkedItems.map((item, idx) => (
+                        <div key={item.id} onClick={() => startEditItem(item)} style={{
+                          display: "flex", alignItems: "center", gap: 12,
+                          padding: "10px 16px 10px 28px",
+                          borderTop: `0.5px solid ${theme.separator}`,
+                          cursor: "pointer",
+                        }}>
+                          {item.photos?.[0] && <Thumb src={item.photos[0]} />}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 15, fontWeight: 400, letterSpacing: -0.2 }}>{item.name}</div>
+                            <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 1 }}>
+                              {item.managementNo} · {item.category}
+                              {item.brand && ` · ${item.brand}`}
+                            </div>
+                          </div>
+                          {item.status === STATUS.BUYING && (
+                            <button onClick={(e) => (e.stopPropagation(), advanceToPic(item.id))} style={{
+                              ...baseBtn, padding: "6px 12px", flexShrink: 0,
+                              background: theme.accentSoft, color: theme.accent, fontSize: 13, fontWeight: 500,
+                            }}>→ Pic</button>
+                          )}
+                          {item.status !== STATUS.BUYING && (
+                            <span style={{
+                              fontSize: 12, fontWeight: 500, padding: "3px 8px", borderRadius: 6,
+                              background: theme.successSoft, color: theme.success,
+                            }}>{item.status}</span>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Add item button */}
+                      <div style={{ borderTop: `0.5px solid ${theme.separator}`, padding: "10px 16px" }}>
+                        <button onClick={() => startAddItemToBuying(buying.id)} style={{
+                          ...baseBtn, background: "none", color: theme.accent, padding: 0,
+                          fontSize: 14, fontWeight: 500,
+                        }}>＋ アイテム追加</button>
                       </div>
                     </div>
-                    <button onClick={() => advanceToPic(item.id)} style={{
-                      ...baseBtn, padding: "7px 14px", flexShrink: 0,
-                      background: theme.accentSoft, color: theme.accent, fontSize: 14, fontWeight: 500,
-                    }}>→ Pic</button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -237,10 +303,11 @@ export const App = () => {
 
                 <div style={{ background: theme.surface, borderRadius: 16, overflow: "hidden" }}>
                   {stockItems.map((item, idx) => (
-                    <div key={item.id} style={{
+                    <div key={item.id} onClick={() => startEditItem(item)} style={{
                       display: "flex", alignItems: "center", gap: 12,
                       padding: "14px 16px",
                       borderTop: idx > 0 ? `0.5px solid ${theme.separator}` : "none",
+                      cursor: "pointer",
                     }}>
                       {item.photos?.[0] && <Thumb src={item.photos[0]} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
