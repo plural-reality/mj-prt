@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [master]
+    branches: [master, v2]
 
 permissions:
   contents: read
@@ -21,11 +21,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
       - run: npm run build
+
+      - uses: actions/checkout@v4
+        with:
+          ref: v2
+          path: _v2
+      - run: cd _v2 && npm ci && npm run build
+      - run: mv _v2/dist dist/v2
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
